@@ -1,0 +1,10 @@
+name: FunSpeedRepair
+version: 1.0
+main: me.moonful.fsp.FunSpeedRepairPlugin
+api-version: 1.16
+author: MoonFul
+
+commands:
+  fsp:
+    usage: /fsp reload
+    description: Reload FunSpeedRepair config
