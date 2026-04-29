@@ -8,7 +8,7 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.*;
 import org.bukkit.command.*;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -33,9 +33,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         Bukkit.getPluginManager().registerEvents(this, this);
     }
 
-    // =========================
-    // ITEM
-    // =========================
+    // ================= ITEM =================
     private ItemStack item(int amount) {
         ItemStack i = new ItemStack(Material.SNOWBALL, amount);
         ItemMeta m = i.getItemMeta();
@@ -44,9 +42,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         return i;
     }
 
-    // =========================
-    // WORLDGUARD TOP REGION
-    // =========================
+    // ================= WORLDGUARD =================
     private ProtectedRegion getTopRegion(Location loc) {
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
@@ -71,9 +67,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         return getConfig().getStringList("blocked-region").contains(r.getId());
     }
 
-    // =========================
-    // COMMANDS
-    // =========================
+    // ================= COMMANDS =================
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
 
@@ -83,33 +77,52 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         if (a.length == 0) return true;
 
         // GIVE
-        if (a[0].equalsIgnoreCase("admin") && a.length >= 4 && a[1].equalsIgnoreCase("give")) {
+        if (a[0].equalsIgnoreCase("give")) {
 
-            if (!p.hasPermission("funsnow.admin")) return true;
+            if (!p.hasPermission("funsnow.admin") && !p.isOp()) {
+                p.sendMessage("§cNo permission");
+                return true;
+            }
 
-            Player t = Bukkit.getPlayer(a[2]);
-            int amt = Integer.parseInt(a[3]);
+            if (a.length < 3) {
+                p.sendMessage("§cUsage: /funsnowball give <player> <amount>");
+                return true;
+            }
+
+            Player t = Bukkit.getPlayer(a[1]);
+            int amt;
+
+            try {
+                amt = Integer.parseInt(a[2]);
+            } catch (Exception e) {
+                p.sendMessage("§cInvalid number");
+                return true;
+            }
 
             if (t != null) {
                 t.getInventory().addItem(item(amt));
+                p.sendMessage("§aGiven " + amt + " snowballs to " + t.getName());
+            } else {
+                p.sendMessage("§cPlayer not found");
             }
         }
 
         // RELOAD
         if (a[0].equalsIgnoreCase("reload")) {
 
-            if (!p.hasPermission("funsnow.admin")) return true;
+            if (!p.hasPermission("funsnow.admin") && !p.isOp()) {
+                p.sendMessage("§cNo permission");
+                return true;
+            }
 
             reloadConfig();
-            p.sendMessage(ChatColor.GREEN + "Config reloaded");
+            p.sendMessage("§aConfig reloaded");
         }
 
         return true;
     }
 
-    // =========================
-    // COOLDOWN
-    // =========================
+    // ================= COOLDOWN =================
     @EventHandler
     public void throwBall(ProjectileLaunchEvent e) {
 
@@ -131,9 +144,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         cooldown.put(p.getUniqueId(), System.currentTimeMillis());
     }
 
-    // =========================
-    // HIT LOGIC
-    // =========================
+    // ================= HIT =================
     @EventHandler
     public void hit(ProjectileHitEvent e) {
 
@@ -145,35 +156,30 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         for (Player p : hit.getWorld().getPlayers()) {
 
             double dist = p.getLocation().distance(hit);
-
             if (dist > radius) continue;
 
             if (isBlocked(p.getLocation())) {
-                p.sendMessage(ChatColor.RED + "Blocked region");
+                p.sendMessage("§cBlocked region");
                 continue;
             }
 
-            // =========================
-            // FIXED EFFECT PARSING
-            // =========================
+            // FIX EFFECT PARSING
             String[] slow = getConfig().getString("effects.SLOW").split(":");
 
-            int baseDuration = Integer.parseInt(slow[0]) * 20;
-            int amplifier = Integer.parseInt(slow[1]);
+            int base = Integer.parseInt(slow[0]) * 20;
+            int amp = Integer.parseInt(slow[1]);
 
             double f = 1 - (dist / radius);
-            int finalDuration = (int) (baseDuration * f);
+            int duration = (int) (base * f);
 
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, finalDuration, amplifier));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, finalDuration, 0));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, duration, amp));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, duration, 0));
 
             frozenJump.add(p.getUniqueId());
         }
     }
 
-    // =========================
-    // FREEZE (NO JUMP)
-    // =========================
+    // ================= FREEZE =================
     @EventHandler
     public void move(PlayerMoveEvent e) {
 
