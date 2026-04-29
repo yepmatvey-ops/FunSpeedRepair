@@ -1,0 +1,12 @@
+name: FunSnow
+version: 2.0
+main: com.funsnow.FunSnow
+api-version: 1.16
+
+commands:
+  funsnowball:
+    usage: /funsnowball
+
+permissions:
+  funsnow.admin:
+    default: op

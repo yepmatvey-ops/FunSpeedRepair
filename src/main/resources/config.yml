@@ -1,0 +1,12 @@
+snowball:
+  name: '&b❄ FunSnow Ball'
+radius: 7
+freeze: 3
+cooldown: 20
+
+effects:
+  SLOW: 3:2
+  WEAKNESS: 3:0
+
+blocked-region:
+  - spawn
