@@ -1,1 +1,0 @@
-package me.moonful.funsnow; public class FunSnowPlugin {}
