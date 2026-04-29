@@ -18,6 +18,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 
@@ -37,34 +38,24 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
     private ItemStack item(int amount) {
         ItemStack i = new ItemStack(Material.SNOWBALL, amount);
         ItemMeta m = i.getItemMeta();
-        m.setDisplayName(ChatColor.AQUA + "❄ FunSnow");
+        m.setDisplayName("§b❄ FunSnow");
         i.setItemMeta(m);
         return i;
     }
 
-    // ================= WORLDGUARD =================
-    private ProtectedRegion getTopRegion(Location loc) {
+    // ================= WG =================
+    private boolean isBlocked(Location loc) {
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
 
         ApplicableRegionSet set = query.getApplicableRegions(BukkitAdapter.adapt(loc));
 
-        ProtectedRegion top = null;
-
         for (ProtectedRegion r : set) {
-            if (top == null || r.getPriority() > top.getPriority()) {
-                top = r;
+            if (getConfig().getStringList("blocked-region").contains(r.getId())) {
+                return true;
             }
         }
-
-        return top;
-    }
-
-    private boolean isBlocked(Location loc) {
-        ProtectedRegion r = getTopRegion(loc);
-        if (r == null) return false;
-
-        return getConfig().getStringList("blocked-region").contains(r.getId());
+        return false;
     }
 
     // ================= COMMANDS =================
@@ -76,47 +67,21 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
 
         if (a.length == 0) return true;
 
-        // GIVE
         if (a[0].equalsIgnoreCase("give")) {
 
-            if (!p.hasPermission("funsnow.admin") && !p.isOp()) {
-                p.sendMessage("§cNo permission");
-                return true;
-            }
-
-            if (a.length < 3) {
-                p.sendMessage("§cUsage: /funsnowball give <player> <amount>");
-                return true;
-            }
+            if (!p.hasPermission("funsnow.admin") && !p.isOp()) return true;
 
             Player t = Bukkit.getPlayer(a[1]);
-            int amt;
-
-            try {
-                amt = Integer.parseInt(a[2]);
-            } catch (Exception e) {
-                p.sendMessage("§cInvalid number");
-                return true;
-            }
+            int amt = Integer.parseInt(a[2]);
 
             if (t != null) {
                 t.getInventory().addItem(item(amt));
-                p.sendMessage("§aGiven " + amt + " snowballs to " + t.getName());
-            } else {
-                p.sendMessage("§cPlayer not found");
             }
         }
 
-        // RELOAD
         if (a[0].equalsIgnoreCase("reload")) {
-
-            if (!p.hasPermission("funsnow.admin") && !p.isOp()) {
-                p.sendMessage("§cNo permission");
-                return true;
-            }
-
+            if (!p.hasPermission("funsnow.admin") && !p.isOp()) return true;
             reloadConfig();
-            p.sendMessage("§aConfig reloaded");
         }
 
         return true;
@@ -153,17 +118,62 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         Location hit = e.getEntity().getLocation();
         double radius = getConfig().getDouble("radius");
 
+        new BukkitRunnable() {
+
+            int ticks = 0;
+
+            @Override
+            public void run() {
+
+                if (ticks > 40) { // ~2 sec particles
+                    cancel();
+                    return;
+                }
+
+                // ================= PARTICLES =================
+
+                for (double x = -radius; x <= radius; x += 1) {
+                    for (double y = 0; y <= 2; y += 1) {
+                        for (double z = -radius; z <= radius; z += 1) {
+
+                            Location loc = hit.clone().add(x, y, z);
+
+                            if (loc.distance(hit) > radius) continue;
+
+                            // WHITE SNOW CUBE
+                            hit.getWorld().spawnParticle(
+                                    Particle.SNOW_SHOVEL,
+                                    loc,
+                                    1,
+                                    0, 0, 0,
+                                    0
+                            );
+
+                            // BLUE VORTEX (center)
+                            if (loc.distance(hit) < radius / 2) {
+                                hit.getWorld().spawnParticle(
+                                        Particle.REDSTONE,
+                                        loc,
+                                        1,
+                                        new Particle.DustOptions(Color.BLUE, 1)
+                                );
+                            }
+                        }
+                    }
+                }
+
+                ticks++;
+            }
+        }.runTaskTimer(this, 0L, 1L);
+
+        // ================= EFFECTS =================
         for (Player p : hit.getWorld().getPlayers()) {
 
             double dist = p.getLocation().distance(hit);
             if (dist > radius) continue;
 
-            if (isBlocked(p.getLocation())) {
-                p.sendMessage("§cBlocked region");
-                continue;
-            }
+            if (isBlocked(p.getLocation())) continue;
 
-            // FIX EFFECT PARSING
             String[] slow = getConfig().getString("effects.SLOW").split(":");
 
             int base = Integer.parseInt(slow[0]) * 20;
@@ -179,7 +189,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         }
     }
 
-    // ================= FREEZE =================
+    // ================= JUMP BLOCK =================
     @EventHandler
     public void move(PlayerMoveEvent e) {
 
@@ -188,11 +198,7 @@ public class FunSnow extends JavaPlugin implements Listener, CommandExecutor {
         if (!frozenJump.contains(p.getUniqueId())) return;
 
         if (e.getTo().getY() > e.getFrom().getY()) {
-
-            Location l = p.getLocation();
-            l.setY(e.getFrom().getY());
-
-            p.teleport(l);
+            p.teleport(e.getFrom());
         }
     }
 }
