@@ -9,10 +9,10 @@
     <version>2.0</version>
 
     <properties>
-        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- 🔥 ВАЖНО: репозитории -->
+    <!-- REPOSITORIES -->
     <repositories>
 
         <repository>
@@ -27,9 +27,10 @@
 
     </repositories>
 
+    <!-- DEPENDENCIES -->
     <dependencies>
 
-        <!-- Spigot -->
+        <!-- Spigot 1.16.5 -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -54,5 +55,23 @@
         </dependency>
 
     </dependencies>
+
+    <!-- BUILD -->
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+
+                <configuration>
+                    <release>21</release>
+                </configuration>
+
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>
