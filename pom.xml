@@ -2,11 +2,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>MoonFul</groupId>
-    <artifactId>FunSpeedRepair</artifactId>
+    <artifactId>FunSnow</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <name>FunSpeedRepair</name>
+    <name>FunSnow</name>
 
 <repositories>
     <repository>
@@ -25,7 +25,7 @@
 </dependencies>
 
     <build>
-        <finalName>FunSpeedRepair</finalName>
+        <finalName>FunSnow</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
